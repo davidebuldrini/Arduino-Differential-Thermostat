@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+  <head>
+		
+		<link rel="stylesheet" type="text/css" href="style.css">
+		
+		<title>Arduino Powered Differential Thermostat</title>
+
+    <script>
+
+			var tablesLoaded = false; // wether the table are already inizializated
+			var excludeFields = ['id', 'ref']; // don't need to show this fields in the table
+
+			// for testing purpose: just try out with json dummy data	(need call the function in body onload)			
+			function test() {
+				
+				var response = '{"sensors":[{"id":0,"ref":true,"name":"boiler","value":52.00,"raw":667,"coeff":1.00,"pin":5,"deltaT":0.00},{"id":1,"ref":false,"name":"solar panel","value":71.50,"raw":120,"coeff":1.00,"pin":0,"deltaT":20.00},{"id":2,"ref":false,"name":"stove","value":42.00,"raw":1023,"coeff":1.00,"pin":1,"deltaT":-10.00},{"id":3,"ref":false,"name":"stove2","value":55.00,"raw":665,"coeff":1.00,"pin":2,"deltaT":3.00}],"apins":[120,1023,863,729,565,635],"dpins":[1,1,1,0,1,0,0,0,0,0,1,1,1],"thermostat":{"triggerDeltaT":10}}';
+				var data = JSON.parse(response);
+	      								
+				if (!tablesLoaded) { // inizialize tables body to address values
+						initTables(data);
+				}
+				updateData(data); // update values in the tables
+			}	
+			
+			// ***************************
+			// inizialize the tables content 
+			// ***************************			
+	    function initTables(data) {
+			
+				//console.log(data);       
+				var html = ''; 
+				
+				// initialize sensors table
+				for (var i = 0; i < data.sensors.length; i++) {
+					
+					var sensor = data.sensors[i];
+					html += '<tr>'; 
+					
+					for (var field in sensor) {
+							
+							if (excludeFields.indexOf(field) == -1) {// check that the current field name is not mentioned in the exclude array		
+								html += '<td id="s' + sensor.id + field +'"></td>';
+							}
+					}
+					
+					html += '<td id="cal' + sensor.id + '"></td>'; // calibration cell			
+					html += '</tr>';
+				}
+				
+				document.getElementById('sensors').innerHTML = html;
+	    	
+	    	// add sensor calibration support to sensors table
+	    	for (var i = 0; i < data.sensors.length; i++) {
+					
+					var sensor = data.sensors[i];	
+					
+					// input field to write the temperature float value
+					var input = document.createElement('input');
+					
+					input.id = "calinput" + sensor.id;
+					input.maxlength = 6; // nnn.nn 6 characters with point
+					input.size = 6; 
+					
+										
+					// button used to send the temperature value to the server to calibrate the sensor										
+					var button = document.createElement('button');
+					button.id = 'calbutton' + sensor.id;
+					button.innerHTML = 'SET';
+					button.sid = sensor.id; // store the sensor id inside a custom attribute
+					
+					button.onclick = function() {
+						// send the calibrate request to the server via ajax
+						var request = new XMLHttpRequest();						
+						var calInput = document.getElementById('calinput' + this.sid);
+						
+						// exp: calibrate&1=22.30
+						request.open('GET', 'calibrate&' + this.sid + '=' + calInput.value, true);
+						request.send(null);
+					};	
+					
+					// add new elements to the calibration cell
+					var cell = document.getElementById('cal' + sensor.id);
+					
+					cell.appendChild(input);
+					cell.appendChild(button);					
+				}
+	    			
+	    			
+				// initialize analog pins table
+				html = '';
+				
+				for (var i = 0; i < data.apins.length; i++) {
+					html += '<tr><td>' + i + '</td><td id="a' + i + '">' + data.apins[i] + '</td></tr>';
+				}
+				
+				document.getElementById('apins').innerHTML = html;
+				
+				
+				// initialize digital pins table
+				html = '';
+				
+				for (var i = 0; i < data.dpins.length; i++) {
+					html += '<tr><td>' + i + '</td><td id="d' + i + '">' + data.dpins[i] + 
+						'</td><td id="setd' + i + '"></td></tr>';						
+				}
+				
+				document.getElementById('dpins').innerHTML = html;
+								
+				// add set state button to digital pins table
+				for (var i = 0; i < data.dpins.length; i++) {
+				
+					// button used to change the digital pins state
+					var button = document.createElement('button');
+					button.innerHTML = 'SET';
+					button.pin = i; // store pin number inside a custom attribute
+										
+					button.onclick = function() {
+						// send the request to the server via ajax
+						var request = new XMLHttpRequest();						
+						
+						// retrieve current pin state
+						var pinState = document.getElementById('d' + this.pin);
+						
+						// se the opposite value
+						var newState = 1;
+						
+						if (pinState.innerHTML == "1") {
+							newState = 0;
+					    } 
+						
+						// exp: set_digital&5=1						 
+						request.open('GET', 'set_digital&' + this.pin + '=' + newState, true);
+						request.send(null);
+					};	
+									
+					var cell = document.getElementById('setd' + i);
+										
+					cell.appendChild(button);		
+				}
+				
+				
+				tablesLoaded = true;
+				
+				var button = document.getElementById('saveSettings');
+				
+				button.onclick = function() {
+						
+						var request = new XMLHttpRequest();									
+						request.open('GET', 'save_settings&set.txt', true);
+						request.send(null);
+				};	
+				
+				button = document.getElementById('setDeltaT');
+				
+				button.onclick = function() {
+						
+						var request = new XMLHttpRequest();		
+						var input = document.getElementById('deltaTinput');
+													
+						request.open('GET', 'setDeltaT&' + input.value, true);
+						request.send(null);
+				};	
+				
+				button = document.getElementById('thermostatOn');
+				
+				button.onclick = function() {
+						
+						var request = new XMLHttpRequest();		
+						var input = document.getElementById('deltaTinput');
+													
+						request.open('GET', 'thermostat&1', true);
+						request.send(null);
+				};		
+				
+				button = document.getElementById('thermostatOff');
+				
+				button.onclick = function() {
+						
+						var request = new XMLHttpRequest();		
+						var input = document.getElementById('deltaTinput');
+													
+						request.open('GET', 'thermostat&0', true);
+						request.send(null);
+				};		
+	    }
+	    	
+			// ***************************
+			// update the table cells content 				
+			// ***************************
+	    function updateData(data) {
+										
+				//console.log(data);
+	    	
+	    	// update sensors table
+				for (var i = 0; i < data.sensors.length; i++) {
+					
+					var sensor = data.sensors[i];		
+											
+					for (var field in sensor) {
+						
+						if (excludeFields.indexOf(field) == -1) {// check that the current field name is not mentioned in the exclude array		
+										
+							var cell = document.getElementById('s' + sensor.id + field);
+							
+							cell.innerHTML = sensor[field];
+							
+							if (sensor.ref == 1) { 
+							
+								// deltaT for reference sensor doesn't make sense
+								if (field == 'deltaT') { 
+									cell.innerHTML = 'REF';
+								}							
+							}
+							else if (field == 'value') {
+							
+								if (parseFloat(sensor.deltaT) > parseFloat(data.thermostat.triggerDeltaT)) {
+									cell.className ='hot';
+								}
+								else if (sensor.deltaT < 0) {	
+									cell.className ='cold';
+								}
+								else {
+									cell.className ='';
+								}
+							}		
+						}
+					}
+				}
+								
+				// update digital pins table
+				
+				for (var i = 0; i < data.dpins.length; i++) {
+					
+					cell = document.getElementById('d' + i);
+					cell.innerHTML = data.dpins[i];
+				}
+				
+				// update analog pins table
+				
+				for (var i = 0; i < data.apins.length; i++) {
+					
+					cell = document.getElementById('a' + i);
+					cell.innerHTML = data.apins[i];
+				}
+								
+				// trigger delta T setting
+				document.getElementById('triggerdt').innerHTML = data.thermostat.triggerDeltaT;
+	    }
+	    
+	    
+	    // ***************************
+	    // request data from the server
+	    // ****************************
+	    function GetData() {
+	      
+	      var nocache = '&nocache=' + Math.random() * 1000000;
+	      var request = new XMLHttpRequest();
+	 
+	      request.onreadystatechange = function() {
+	      
+	        if (this.readyState == 4) {
+	          if (this.status == 200) {
+	            if (this.responseText != null) {
+								
+								// for testing purpose
+								//response = '{"sensors":[{"name":"solar panel","value":71.50,"raw":120,"coeff":1.00,"pin":0,"deltaT":20.00},{"name":"stove","value":42.00,"raw":1023,"coeff":1.00,"pin":1,"deltaT":-10.00},{"name":"stove2","value":55.00,"raw":665,"coeff":1.00,"pin":2,"deltaT":3.00}],"apins":[120,1023,863,729,565,635],"dpins":[1,1,1,0,1,0,0,0,0,0,1,1,1],"thermostat":{"triggerDeltaT":10}}';
+								data = JSON.parse(this.responseText);
+	      								
+								if (!tablesLoaded) { // inizialize tables body to address values
+									initTables(data);
+								}
+								updateData(data); // update values in the tables
+							}
+						}
+					}
+				};
+	
+	      request.open('GET', 'ajax_request' + nocache, true);
+	      request.send(null);
+	      setTimeout('GetData()', 1000);
+	    }
+	  
+		</script>
+  </head>
+  
+  <!--<body onload="test()">-->                        
+  <body onload="GetData()">                        
+   
+		<div id="content">
+		 
+			<table class="tcontainer">
+				<tr>
+					<td>							 
+						<table class="tftable">
+							
+							<caption>Sensors</caption>
+							
+							<thead>
+								<tr>
+									<th>Name</th><th>°C</th><th>raw</th><th>pin</th><th>Delta t</th><th>Calibrate</th>
+								</tr>
+							</thead>      
+							
+							<tbody id="sensors"></tbody>
+							
+						</table>	
+								
+						
+						<p>Delta T Trigger: <span id="triggerdt"></span>°
+						<span><input id="deltaTinput" size="6"/><button id="setDeltaT">SET</button></span>
+						</p>
+						
+						<p>Thermostat<span> <button id="thermostatOn">ON</button><button id="thermostatOff">OFF</button></p>
+						
+						<button id="saveSettings">Save Settings</button>
+							
+					</td>
+					
+					<td>
+						
+						<table>
+							<tr>
+								<td>
+						
+									<table class="tftable">
+											
+										<caption>Analog Pins</caption>
+											
+										<thead>
+											<tr>
+												<th>Pin</th><th>Value</th>
+											</tr>
+										</thead>      
+											
+										<tbody id="apins"></tbody>
+
+									</table>	
+								</td>
+								<td>
+							
+									<table class="tftable">
+											
+										<caption>Digital Pins</caption>
+										
+										<thead>
+											<tr>
+												<th>Pin</th><th>Value</th><th>Set</th>
+											</tr>
+										</thead>      
+												
+										<tbody id="dpins"></tbody>
+
+									</table>	
+								</td>
+							</tr>
+						</table>
+					</td>
+				</tr>
+			</table>
+		</div>							
+				
+  </body>
+</html>
