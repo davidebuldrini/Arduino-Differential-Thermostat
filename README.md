@@ -25,3 +25,10 @@ Sketch uses 31,294 bytes (97%) of program storage space. Maximum is 32,256 bytes
 Global variables use 1,255 bytes (61%) of dynamic memory, leaving 793 bytes for local variables. Maximum is 2,048 bytes.
 
 As you can see the sketch eat almost all memory in Arduino one, any suggestion to optimize the code is welcome...
+
+
+SETUP:
+
+- put the thermostat folder located under libraries into your arduino libraries folder
+- put the files under SD-CARD into the arduino sd card root 
+- compile and upload to arduino the sketch located under differential-thermostat
