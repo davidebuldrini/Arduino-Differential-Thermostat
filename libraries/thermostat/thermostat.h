@@ -55,7 +55,7 @@ class Thermostat
 {
   private:
   
-	unsigned long _timer; // it will contains millis() values 
+	unsigned long _timer[MAX_SENSORS_COUNT]; // it will contains millis() values 
 	byte _state; // thermostat on / off 	useful values: 0 , 1
       
   public:

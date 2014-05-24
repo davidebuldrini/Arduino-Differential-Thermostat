@@ -259,7 +259,7 @@ void loop() {
     #endif  
   } // end of if (client) {
   
-  delay(150);  
+  //delay(150);  
 } 
 
 // send the data to the web browser as a JSON string

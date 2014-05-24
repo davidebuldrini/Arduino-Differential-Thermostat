@@ -51,9 +51,13 @@ Thermostat::Thermostat() {
   sensorsCount = 0;
   
   // to avoid relay switch flickering 
-  switchDelay = 2000; 
-  _timer = millis(); 
+  switchDelay = 30000; 
   _state = 1; 
+  
+  for (byte c = 0; c < MAX_SENSORS_COUNT; c++) {	  
+	  _timer[c] = millis();
+  }	
+	
 }
 
 // add a sensor to the sensors array and return the sensor id
@@ -75,48 +79,57 @@ byte Thermostat::addReference(TempSensor *sensor) {
 
 boolean Thermostat::checkDelta() {
 	
-  if (_state == 0) {
-	  return false;
-  }	
-  
-  _allNormal = true;
-  boolean toNormal = false; 
-  
-  // Cycle all sensors
-  for (byte c = 0; c < sensorsCount; c++) {
-    
-    if (!isReference(c)) { // exclude the reference sensor
-		
-			// check if the delta t between current sensor and reference sensor is overcomed  
-			if (deltaT(c) > triggerDeltaT) {
+	/*
+	 * over delta t ? onOvercome callback, wait for switch delay timer
+	 * under delta t? onNormal callback
+	*/
+	
+	if (_state == 0) {
+		  return false;
+	}	
+	  
+	_allNormal = true;
+	boolean toNormal = false; 
+	  
+	// Cycle all sensors
+	for (byte c = 0; c < sensorsCount; c++) {
+	
+		if (!isReference(c)) { // exclude the reference sensor
+			
+			if ((unsigned long)(millis() - _timer[c]) >= switchDelay) {
+										
+				if (!overcome[c]) {		
+					// sensor is overcoming delta t  
+					if (deltaT(c) > triggerDeltaT) {
 
-				// has the temperature sensor already overcomed delta t?
-				if (!overcome[c] && (millis() > (_timer + switchDelay))) {
-					overcome[c] = true;
-					_timer = millis();
-					onOvercome(sensors[c], this); // overcome callback
+						overcome[c] = true;
+						onOvercome(sensors[c], this); // overcome callback		
+						_timer[c] = millis();				
+					}
 				}
-			}
-			// not overcomed delta t  
-			else {
-				// a previously overcomed sensor now returns to normal state 
-				if (overcome[c] && (millis() > (_timer + switchDelay))) {
-					overcome[c] = false;
-					_timer = millis();
-					onNormal(sensors[c], this); // fall to normal callback
-					toNormal = true;
-				}
-			}
+				// sensor already overcomed delta t		
+				else {
+					// a previously overcomed sensor now returns to normal state 
+					if (deltaT(c) <= triggerDeltaT ) {
+				
+						overcome[c] = false;						
+						onNormal(sensors[c], this); // fall to normal callback
+						toNormal = true;
+					}
+			    }
+			}														
 			
 			if (overcome[c]) {
 				_allNormal = false;
-		    }
+			}
 		}
-    }
-    if (toNormal && _allNormal) {
+	}
+	
+   
+	if (toNormal && _allNormal) {		
 		onAllNormal(this);
 	}
-	return true;
+	return true;		
 }
 
 // return the delta t between the sensor parameter and the reference sensor
