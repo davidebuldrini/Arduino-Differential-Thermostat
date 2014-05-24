@@ -26,7 +26,7 @@
  * Analog inputs attached to pins A0 through A5 
  
  
- created 18 Dec 2009
+ created 18 Dec 2014
  by Davide Buldrini 
  ideozone.it
  
@@ -120,8 +120,6 @@ TempSensor stove("stove", ROCKET_STOVE_SENSOR);
 
 Thermostat thermostat;
 
-//unsigned long loopTimer
-
 
 void setup() {
     
@@ -177,6 +175,7 @@ void setup() {
   
   thermostat.onOvercome = &onOvercome; // callback function that fires when a sensor temperature overcome the minimum delta t
   thermostat.onNormal = &onNormal; // callback function that fires when the sensor value return within the minimum delta t
+  thermostat.onAllNormal = &onAllNormal; // callback function that fires when all sensors are within the minimum delta t
   
   loadSettings("set.txt"); 
 }
